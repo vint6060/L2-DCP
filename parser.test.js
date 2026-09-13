@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { detectVendor, parseConfig, summarize, toCsv } from '../parser.js';
+import { detectVendor, parseConfig, summarize, toCsv } from './parser.js';
 
 const sample = `! SNR configuration
 hostname ekb-snr-01
