@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { detectVendor, parseConfig, summarize, toCsv } from './parser.js';
 import { createDemoConfigs, createDemoDevices, demoVendors } from './demo-configs.js';
+import { getPageCount, paginate } from './pagination.js';
 
 const sample = `! SNR configuration
 hostname ekb-snr-01
@@ -75,4 +76,32 @@ test('app initializes demo devices before its first render', async () => {
 test('user uploads retain their non-demo origin', () => {
   const device = parseConfig({ name: 'uploaded.cfg', text: sample });
   assert.equal(device.origin, 'user-upload');
+});
+
+test('paginates 50 devices per page and exposes the total page count', () => {
+  const devices = Array.from({ length: 121 }, (_, id) => ({ id }));
+  assert.equal(getPageCount(devices), 3);
+  assert.equal(paginate(devices, 1).items.length, 50);
+  assert.equal(paginate(devices, 3).items.length, 21);
+});
+
+test('clamps pagination at the first and last page boundaries', () => {
+  const devices = Array.from({ length: 51 }, (_, id) => ({ id }));
+  assert.equal(paginate(devices, 0).currentPage, 1);
+  assert.equal(paginate(devices, 99).currentPage, 2);
+  assert.equal(paginate(devices, 99).items[0].id, 50);
+});
+
+test('filters before pagination so a filtered result starts on page one', () => {
+  const devices = Array.from({ length: 100 }, (_, id) => ({ id, vendor: id < 50 ? 'SNR' : 'D-Link' }));
+  const filtered = devices.filter(device => device.vendor === 'D-Link');
+  const page = paginate(filtered, 2);
+  assert.equal(page.pageCount, 1);
+  assert.equal(page.currentPage, 1);
+  assert.equal(page.items.length, 50);
+});
+
+test('resets the UI page when a search or filter changes', async () => {
+  const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
+  assert.match(app, /addEventListener\('input', \(\) => \{ state\.page = 1; render\(\); \}\)/);
 });
