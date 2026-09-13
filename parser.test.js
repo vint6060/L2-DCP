@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { detectVendor, parseConfig, summarize, toCsv } from './parser.js';
 import { createDemoConfigs, createDemoDevices, demoVendors } from './demo-configs.js';
@@ -62,6 +63,13 @@ test('startup demo payload contains 50 explicitly synthetic configurations acros
   assert.equal(devices.filter(device => device.vendor.value === 'FiberHome').length, 10);
   assert.equal(devices.filter(device => device.vendor.value === 'Edgecore').length, 10);
   assert.equal(devices.filter(device => device.vendor.value === 'Eltex').length, 10);
+});
+
+test('app initializes demo devices before its first render', async () => {
+  const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
+  assert.match(app, /state = \{ devices: createDemoDevices\(\)/);
+  assert.match(app, /populateVendors\(\); render\(\);/);
+  assert.doesNotMatch(app, /render\(\); worker\.postMessage\(\{ demo: true/);
 });
 
 test('user uploads retain their non-demo origin', () => {
