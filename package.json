@@ -1,0 +1,1 @@
+{"name":"l2-dcp","version":"0.1.0","private":true,"type":"module","scripts":{"test":"node --test","check":"node --check parser.js && node --check app.js && node --check worker.js"}}
