@@ -65,11 +65,11 @@ function unknownDirectives(text, ports, vlans) {
   return text.split(/\r?\n/).map(line => line.trim()).filter(line => line && !known.test(line) && !/^[-=]+$/.test(line) && /[a-z]/i.test(line)).filter((line, i, all) => all.indexOf(line) === i).slice(0, 30);
 }
 
-export function parseConfig({ name = 'config.cfg', text = '' }) {
+export function parseConfig({ name = 'config.cfg', text = '', origin = 'user-upload' }) {
   const vendor = detectVendor(text, name); const ports = parsePorts(text); const vlans = parseVlans(text); const settings = extractSettings(text);
   const hostname = extractHostname(text, name); const warnings = []; if (vendor === 'Generic') warnings.push('Вендор не определён уверенно'); if (!ports.length) warnings.push('Интерфейсы не распознаны'); if (!vlans.length) warnings.push('VLAN не найдены');
   const attention = Object.values(settings).filter(setting => setting.enabled).length + warnings.length;
-  return { id: `${name}-${text.length}`, source: name, hostname: confidence(hostname), vendor: confidence(vendor, vendor === 'Generic' ? 'unknown' : 'heuristic'), model: confidence((text.match(/(?:model|product|hardware)\s*[:=]?\s*([^\s#]+)/i) || [])[1] || 'unknown', 'heuristic'), ports, vlans, settings, unknown: unknownDirectives(text, ports, vlans), warnings, status: attention ? 'attention' : 'healthy', parsedAt: new Date().toISOString(), bytes: text.length };
+  return { id: `${origin}-${name}-${text.length}`, source: name, origin, hostname: confidence(hostname), vendor: confidence(vendor, vendor === 'Generic' ? 'unknown' : 'heuristic'), model: confidence((text.match(/(?:model|product|hardware)\s*[:=]?\s*([^\s#]+)/i) || [])[1] || 'unknown', 'heuristic'), ports, vlans, settings, unknown: unknownDirectives(text, ports, vlans), warnings, status: attention ? 'attention' : 'healthy', parsedAt: new Date().toISOString(), bytes: text.length };
 }
 
 export function summarize(devices) {

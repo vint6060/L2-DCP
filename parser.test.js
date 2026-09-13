@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detectVendor, parseConfig, summarize, toCsv } from './parser.js';
+import { createDemoConfigs, createDemoDevices, demoVendors } from './demo-configs.js';
 
 const sample = `! SNR configuration
 hostname ekb-snr-01
@@ -47,4 +48,23 @@ test('summarizes devices and emits escaped CSV', () => {
   assert.equal(summary.vlans, 2);
   assert.match(toCsv(devices), /"source","hostname"/);
   assert.match(toCsv(devices), /"a.cfg"/);
+});
+
+test('startup demo payload contains 50 explicitly synthetic configurations across all vendors', () => {
+  const configs = createDemoConfigs();
+  const devices = createDemoDevices();
+  assert.equal(configs.length, 50);
+  assert.equal(devices.length, 50);
+  assert.deepEqual([...new Set(devices.map(device => device.vendor.value))].sort(), [...demoVendors].sort());
+  assert.ok(devices.every(device => device.origin === 'synthetic-demo'));
+  assert.equal(devices.filter(device => device.vendor.value === 'SNR').length, 10);
+  assert.equal(devices.filter(device => device.vendor.value === 'D-Link').length, 10);
+  assert.equal(devices.filter(device => device.vendor.value === 'FiberHome').length, 10);
+  assert.equal(devices.filter(device => device.vendor.value === 'Edgecore').length, 10);
+  assert.equal(devices.filter(device => device.vendor.value === 'Eltex').length, 10);
+});
+
+test('user uploads retain their non-demo origin', () => {
+  const device = parseConfig({ name: 'uploaded.cfg', text: sample });
+  assert.equal(device.origin, 'user-upload');
 });
