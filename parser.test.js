@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { detectVendor, parseConfig, summarize, toCsv } from './parser.js';
 import { createDemoConfigs, createDemoDevices, demoVendors } from './demo-configs.js';
+import { analyzeWithLlm, buildAnalysisPayload, MAX_PAYLOAD_BYTES } from './llm-adapter.js';
 import { getPageCount, paginate } from './pagination.js';
 
 const sample = `! SNR configuration
@@ -76,6 +77,27 @@ test('app initializes demo devices before its first render', async () => {
 test('user uploads retain their non-demo origin', () => {
   const device = parseConfig({ name: 'uploaded.cfg', text: sample });
   assert.equal(device.origin, 'user-upload');
+});
+
+test('LLM payload is normalized, bounded, and excludes raw configuration text', () => {
+  const devices = createDemoDevices();
+  const payload = buildAnalysisPayload(devices);
+  assert.equal(payload.scope, 'summary');
+  assert.equal(payload.deviceCount, 50);
+  assert.ok(new TextEncoder().encode(JSON.stringify(payload)).length <= MAX_PAYLOAD_BYTES);
+  assert.equal(Object.hasOwn(payload.devices[0], 'source'), false);
+  assert.equal(Object.hasOwn(payload.devices[0], 'unknown'), false);
+});
+
+test('LLM adapter uses local fallback without an endpoint and sends only its payload', async () => {
+  const payload = buildAnalysisPayload(createDemoDevices().slice(0, 1));
+  const local = await analyzeWithLlm(payload, { endpoint: '' });
+  assert.equal(local.mode, 'local');
+  let request;
+  const remote = await analyzeWithLlm(payload, { endpoint: 'https://proxy.example/analyze', fetchImpl: async (_url, options) => { request = JSON.parse(options.body); return { ok: true, json: async () => ({ text: 'safe response' }) }; } });
+  assert.equal(remote.text, 'safe response');
+  assert.equal(request.devices[0].hostname, payload.devices[0].hostname);
+  assert.equal(Object.hasOwn(request.devices[0], 'source'), false);
 });
 
 test('paginates 50 devices per page and exposes the total page count', () => {

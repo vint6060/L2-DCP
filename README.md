@@ -32,13 +32,26 @@ git diff --check
 - Нормализация hostname, vendor/model, интерфейсов, VLAN, access/trunk, state/speed, storm control, port isolation, STP/MSTP, ACL, PoE и неизвестных директив.
 - KPI, поиск, фильтры, таблица устройств, drill-down по вкладкам и JSON/CSV экспорт.
 - Поля `confidence` (`heuristic`, `inferred`, `unknown`) и предупреждения о различиях firmware.
-- LLM adapter с безопасным local summary по умолчанию. Реальный POST выполняется только к endpoint, явно введенному пользователем; ключи в клиенте не хранятся.
+- Интерактивная LLM-панель для сводки и выбранного устройства. По умолчанию endpoint не настроен и используется локальный demo fallback.
 
 ## Структура
 
 - `index.html`, `styles.css`, `app.js` — UI и состояние панели.
 - `parser.js` — чистые parser/normalizer функции.
 - `worker.js` — пакетное чтение локальных файлов.
-- `test/parser.test.js` — тесты vendor detection, нормализации, summary и CSV.
+- `llm-adapter.js` — endpoint adapter, локальный fallback и ограниченный нормализованный payload.
+- `test/parser.test.js` — тесты vendor detection, нормализации, summary/CSV, demo preload и LLM payload/adapter.
 
 Parser намеренно эвристический: синтаксис зависит от модели и версии firmware. Для production-использования нужны fixtures по конкретным моделям, versioned schema и серверный LLM gateway с аутентификацией.
+
+## Подключение LLM backend
+
+GitHub Pages остается полностью статическим: ключи провайдера никогда не помещаются в браузер, а запросы по умолчанию не выполняются. Для подключения backend proxy задайте endpoint одним из способов:
+
+```html
+<html data-llm-endpoint="https://your-domain.example/api/l2-analysis">
+```
+
+или до загрузки `app.js` установите `window.L2DCP_CONFIG = { llmEndpoint: 'https://...' }`.
+
+Proxy должен принимать `POST` JSON с полями `version`, `scope`, `summary`, `devices` и `deviceCount`, а вернуть JSON вида `{ "text": "..." }` (также поддерживаются `analysis` и `answer`). Настройте на proxy CORS только для домена Pages, а секреты храните в server-side environment/secrets. Не проксируйте сырые конфигурации: клиент отправляет только ограниченный нормализованный payload размером до 12 KB.
