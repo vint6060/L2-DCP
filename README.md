@@ -1,6 +1,6 @@
 # ROO Network Configuration Dashboard
 
-Локальный dependency-free MVP для анализа конфигураций Ethernet-коммутаторов FTTB/L2+. Проект добавлен отдельно и не зависит от HF Link Monitor backend или Android-модуля ROO.
+Локальный dependency-free MVP для анализа конфигураций Ethernet-коммутаторов FTTB/L2+.
 
 ## Запуск
 
